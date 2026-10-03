@@ -18,7 +18,6 @@
   ],
   "customDatasources": {
     "swaggerhub": {
-      "defaultRegistryUrlTemplate": "{{packageName}}",
       "transformTemplates": [
         "{\"releases\": apis.{\"version\": properties[type='X-Version'].value}}"
       ]
