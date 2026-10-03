@@ -38,4 +38,4 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.get_version.outputs.version }}
-        run: npm publish --tag "$VERSION"
+        run: npm publish
