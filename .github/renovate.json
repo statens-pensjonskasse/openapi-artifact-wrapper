@@ -1,0 +1,13 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "timezone": "Europe/Oslo",
+  "schedule": [ "every 1 months on the 15th day of the month" ],
+  "packageRules": [
+    {
+      "matchPackageNames": [ "*" ],
+      "groupName": "Alle avhengigheter",
+      "groupSlug": "all-deps"
+    }
+  ],
+  "separateMajorMinor": false
+}
