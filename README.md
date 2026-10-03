@@ -18,7 +18,8 @@ Repository is owned by SPK Team "integrasjon-og-samhandling"
 
 Usage
 -----
-A nice start is `npx @statens-pensjonskasse/openapi-artifact-wrapper help`
+A nice start is `npx @statens-pensjonskasse/openapi-artifact-wrapper help`  
+Not entirely public: you (and ci-job) need a github token with read:packages to install the npm package.  
 
 Development
 -----------
