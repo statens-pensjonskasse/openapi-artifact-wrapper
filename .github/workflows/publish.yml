@@ -1,0 +1,35 @@
+name: Publish Node.js package
+
+on:
+  push:
+    branches: 
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-node-package
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+          scope: '@statens-pensjonskasse'
+      - name: Install dependencies
+        run: npm ci
+      # TODO: could compute version
+      - name: Publish to GitHub Packages
+        run: |
+          TAG=$(node -p "require('./package.json').version.includes('-') ? 'next' : 'latest'")
+          # npm publish --tag "$TAG"
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}

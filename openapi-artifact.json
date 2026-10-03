@@ -1,0 +1,11 @@
+{
+  "_README_": [
+    "********************************************************************",
+    "This is just an example configuration used to test and demo the tool",
+    "********************************************************************"
+  ],
+  "registry": "https://api.swaggerhub.com/apis/skatteetaten/inntekt-api",
+  "desiredVersion": "1.6.2",
+  "localJson": "xample-api.json",
+  "localYaml": "xample-api.yaml"
+}

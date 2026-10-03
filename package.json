@@ -1,0 +1,29 @@
+{
+  "name": "@statens-pensjonskasse/openapi-artifact-wrapper",
+  "version": "0.0.0",
+  "description": "Npm package with tools for wrapping an Open API specification in artifact (npm or mvn)",
+  "license": "MIT",
+  "_README_": [
+    "**************************************************************************************",
+    "BEWARE: github reusable workflows need to be considered when changing any script here",
+    "**************************************************************************************"
+  ],
+  "type": "module",
+  "bin": {
+    "openapi-artifact-cli": "openapi-artifact-cli.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "files": [
+    "openapi-artifact-cli.mjs",
+    "src"
+  ],
+  "scripts": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/statens-pensjonskasse/openapi-artifact-wrapper.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
