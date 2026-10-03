@@ -1,4 +1,4 @@
-name: Release with tag = version from API spec (or abort if already tagged), then call provided publish command
+name: Reusable workflow for API versioning (git tag versus API version)
 
 on:
   workflow_call:
@@ -8,18 +8,18 @@ on:
         type: string
         required: true
     outputs:
-      version:
-        description: version used
-        value: ${{ jobs.versioning.outputs.version }}
-      release:
-        description: true if a release was created and artifacts should be published
-        value: ${{ jobs.versioning.outputs.release }}
+      apiversion:
+        description: version of API
+        value: ${{ jobs.versioning.outputs.apiversion }}
+      released:
+        description: true if a release tag matching API version was found
+        value: ${{ jobs.versioning.outputs.released }}
 
 jobs:
   versioning:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.apiversion.outputs.apiversion }}
+      apiversion: ${{ steps.apiversion.outputs.apiversion }}
       release: ${{ steps.goahead.outputs.release }}
     steps:
       - name: Checkout
@@ -51,13 +51,13 @@ jobs:
           fi
           echo "apiversion=$API_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Determine need for release by comparing API specification version to last git version tag, abort if they are the same
+      - name: Check for git tag matching API version
         id: goahead
         run: |
           if [ "${{ steps.apiversion.outputs.apiversion }}" = "${{ steps.gitversion.outputs.gitversion }}" ]; then
             echo "::info::Terminate release because API specification version ${{ steps.apiversion.outputs.apiversion }} is same as git version ${{ steps.gitversion.outputs.gitversion }}."
-            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "released=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "released=false" >> "$GITHUB_OUTPUT"
 

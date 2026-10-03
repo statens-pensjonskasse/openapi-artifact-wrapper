@@ -1,0 +1,79 @@
+name: Reusable workflow for API publishing = creating a release and deploying artifacts (such as npm packages and mvn artifacts)
+
+on:
+  workflow_call:
+    inputs:
+      api-spec-json:
+        description: Open API specification file - version is used to tag, release and publish.
+        type: string
+        required: true
+      publish-command:
+        description: Command to publish artifacts (npm publish, mvn deploy, both, or some other strange command).
+        type: string
+        required: true
+      # Little reason to override inputs below:
+      # no code should be compiled or run with proper use of workflow
+      # auth is default GITHUB_TOKEN, so github packages will work, other registries might balk
+      npm-registry-url:
+        description: npm registry to publish to
+        type: string
+        default: https://npm.pkg.github.com
+      node-version:
+        description: Node version used
+        type: string
+        default: '24'
+      java-version:
+        description: Java version used
+        type: string
+        default: '25'
+      java-distribution:
+        description: Java distribution used
+        type: string
+        default: 'temurin'
+
+jobs:
+  versioning:
+    uses: ./.github/workflows/api-versioning.yml
+    with:
+      api-spec-json: ${{ inputs.api-spec-json }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [ versioning ]
+    permissions:
+      contents: write
+    if: needs.versioning.outputs.released == 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.versioning.outputs.apiversion }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [ versioning ]
+    permissions:
+      contents: write
+      packages: write
+    if: needs.versioning.outputs.released == 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: # node is preinstalled on ubuntu-latest, but publish needs setup-node to configure registry and auth
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.npm-registry-url }}
+      - uses: actions/setup-java@v5
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: ${{ inputs.java-distribution }}
+      - name: Publish artifacts
+        id: publish
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ${{ inputs.publish-command }}
