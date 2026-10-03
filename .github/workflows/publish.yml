@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 concurrency:
@@ -23,13 +23,19 @@ jobs:
           node-version: 24
           registry-url: https://npm.pkg.github.com
           scope: '@statens-pensjonskasse'
-      - name: Install dependencies
-        run: npm ci
-      # TODO: could compute version
-      - name: Publish to GitHub Packages
+      - run: npm ci
+      - name: Get version to use
+        id: get_version
         run: |
-          TAG=$(node -p "require('./package.json').version.includes('-') ? 'next' : 'latest'")
-          # npm publish --tag "$TAG"
-          npm publish
+            echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Publish to GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: npm publish --tag "$VERSION"

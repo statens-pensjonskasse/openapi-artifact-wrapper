@@ -16,6 +16,9 @@ Repository with tools used to track and wrap Open API specifications on swaggerh
 
 Repository is owned by SPK Team "integrasjon-og-samhandling"
 
+Usage
+-----
+A nice start is `npx @statens-pensjonskasse/openapi-artifact-wrapper help`
 
 Development
 -----------

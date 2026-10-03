@@ -1,0 +1,63 @@
+name: Release with tag = version from API spec (or abort if already tagged), then call provided publish command
+
+on:
+  workflow_call:
+    inputs:
+      api-spec-json:
+        description: Open API specification file in json - version is used to tag, release and publish.
+        type: string
+        required: true
+    outputs:
+      version:
+        description: version used
+        value: ${{ jobs.versioning.outputs.version }}
+      release:
+        description: true if a release was created and artifacts should be published
+        value: ${{ jobs.versioning.outputs.release }}
+
+jobs:
+  versioning:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.apiversion.outputs.apiversion }}
+      release: ${{ steps.goahead.outputs.release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find last release tag
+        id: gitversion
+        run: |
+          git fetch --tags
+          LAST_GIT_TAG=$(git tag --sort=-v:refname | head -n1)
+          if [ -z "$LAST_GIT_TAG" ]; then
+            LAST_RELEASE_VERSION="0.0.0"
+          else
+            LAST_RELEASE_VERSION=$(echo "$LAST_GIT_TAG" | awk -F. '{print $1 "." $2 "." $3+1}')
+          fi
+          echo "gitversion=$LAST_RELEASE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Find version in API specification
+        id: apiversion
+        run: |
+          OPENAPI_SPEC_JSON=$( jq -er '.localJson' openapi-artifact.json )
+          # OPENAPI_SPEC_JSON should be same as input, but I prefer to let caller specify
+          API_VERSION=$( jq -er '.info.version' ${{ inputs.api-spec-json }} )
+          if [ -z "$API_VERSION" ] || [ "$API_VERSION" = "{}" ]; then
+            echo "::error::Could not read version from {{ inputs.api-spec-json }}"
+            exit 1
+          fi
+          echo "apiversion=$API_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Determine need for release by comparing API specification version to last git version tag, abort if they are the same
+        id: goahead
+        run: |
+          if [ "${{ steps.apiversion.outputs.apiversion }}" = "${{ steps.gitversion.outputs.gitversion }}" ]; then
+            echo "::info::Terminate release because API specification version ${{ steps.apiversion.outputs.apiversion }} is same as git version ${{ steps.gitversion.outputs.gitversion }}."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
