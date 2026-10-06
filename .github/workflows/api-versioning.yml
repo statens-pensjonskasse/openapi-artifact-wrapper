@@ -20,24 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       apiversion: ${{ steps.apiversion.outputs.apiversion }}
-      release: ${{ steps.goahead.outputs.release }}
+      released: ${{ steps.goahead.outputs.released }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Find last release tag
-        id: gitversion
-        run: |
-          git fetch --tags
-          LAST_GIT_TAG=$(git tag --sort=-v:refname | head -n1)
-          if [ -z "$LAST_GIT_TAG" ]; then
-            LAST_RELEASE_VERSION="0.0.0"
-          else
-            LAST_RELEASE_VERSION=$(echo "$LAST_GIT_TAG" | awk -F. '{print $1 "." $2 "." $3+1}')
-          fi
-          echo "gitversion=$LAST_RELEASE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Find version in API specification
         id: apiversion
@@ -51,11 +39,19 @@ jobs:
           fi
           echo "apiversion=$API_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Check for git tag matching API version
+      - name: Check for release tag matching API version
         id: goahead
         run: |
-          if [ "${{ steps.apiversion.outputs.apiversion }}" = "${{ steps.gitversion.outputs.gitversion }}" ]; then
-            echo "::info::Terminate release because API specification version ${{ steps.apiversion.outputs.apiversion }} is same as git version ${{ steps.gitversion.outputs.gitversion }}."
+          git fetch --tags
+          LAST_GIT_TAG=$(git tag --sort=-v:refname | head -n1)
+          if [ -z "$LAST_GIT_TAG" ]; then
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            LAST_RELEASE_VERSION=$(echo "$LAST_GIT_TAG" | awk -F. '{print $1 "." $2 "." $3+1}')
+          fi
+          if [ "${{ steps.apiversion.outputs.apiversion }}" = "$LAST_RELEASE_VERSION" ]; then
+            echo "::info::Terminate release because API specification version ${{ steps.apiversion.outputs.apiversion }} is found in git tag $LAST_RELEASE_VERSION."
             echo "released=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi

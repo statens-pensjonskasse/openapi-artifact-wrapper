@@ -1,6 +1,6 @@
 {
   "name": "@statens-pensjonskasse/openapi-artifact-wrapper",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Npm package with tools for wrapping an Open API specification in artifact (npm or mvn)",
   "license": "MIT",
   "_README_": [

@@ -1,4 +1,4 @@
-name: Publish Node.js package
+name: Release and publish Node.js package for this repository
 
 on:
   push:
@@ -29,7 +29,8 @@ jobs:
       - name: Get version to use
         id: get_version
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: softprops/action-gh-release@v2
+      - name: GitHub release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           generate_release_notes: true
