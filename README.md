@@ -54,3 +54,21 @@ We may eventually be able to publish open source artifacts as well as code.
 ### Note on licensing (of wrapped API)
 Respect the work of others and the LICENSE carried by wrapped Open API specifications.  
 **How**: check that license and only attach what is required or compatible with that license. Redo if license is changed in a new version of the API.
+
+### SNAPSHOTs and development versions
+Should you care to publish SNAPSHOT/development versions of a wrapped API artifact, you must do so manually
+
+#### Maven
+```
+mvn install:install-file \
+-DpomFile=pom.xml -DgeneratePom=false -DuniqueVersion=false -Dversion=${version}-SNAPSHOT \
+-Dclassifier=openapi -Dtype=yaml -Dfile=${artifactId}.yaml
+```
+(or `mvn deploy:deploy-file-DrepositoryId=github -Durl=https://maven.pkg.github.com/statens-pensjonskasse/${artifactId} ...` if you want to distribute SNAPSHOT outside your machine)
+
+#### Node
+```
+npm version prepatch --preid=alpha --no-git-tag-version
+npm publish --tag alpha
+git checkout package.json package-lock.json
+```
