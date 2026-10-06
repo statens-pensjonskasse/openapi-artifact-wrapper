@@ -1,0 +1,52 @@
+name: Reusable workflow for releasing API (if needed)
+
+on:
+  workflow_call:
+    inputs:
+      api-spec-json:
+        description: Open API specification file - version is used to tag, release and publish.
+        type: string
+        required: true
+    outputs:
+      apiversion:
+        description: version of API
+        value: ${{ jobs.versioning.outputs.apiversion }}
+      release-performed:
+        description: true if a new release was made, false otherwise
+        value: ${{ jobs.release-result.outputs.released }}
+
+jobs:
+  versioning:
+    uses: ./.github/workflows/api-versioning.yml
+    with:
+      api-spec-json: ${{ inputs.api-spec-json }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [ versioning ]
+    permissions:
+      contents: write
+    if: needs.versioning.outputs.released == 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.versioning.outputs.apiversion }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  release-result:
+    runs-on: ubuntu-latest
+    needs: [ release ]
+    if: ${{ always() }}
+    outputs:
+      released: ${{ steps.result.outputs.released }}
+    steps:
+      - name: Report release result
+        id: result
+        env:
+          RELEASE_SUCCEEDED: ${{ needs.release.result == 'success' }}
+        run: echo "released=$RELEASE_SUCCEEDED" >> "$GITHUB_OUTPUT"

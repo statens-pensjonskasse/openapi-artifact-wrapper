@@ -1,111 +1,56 @@
 openapi-artifact-wrapper
 ========================
 
-Repository with tools used to track and wrap Open API specifications on swaggerhub:  
-* npm scripts that may be used from command-line (locally or on CI/CD).
-* github reusable workflows that will use the above scripts to track, wrap and publish a specific Open API specifications.
-* renovate preset with custom datasource that may be used to track version of a specific Open API specification.
+Repository of tools used to track, update, wrap and publish Open API specifications on swaggerhub:  
+* **Tracking**: bump `desiredVersion` (in `openapi-artifact.json`) when a newer version of API is available on swaggerhub
+  * manually with script `renovate-api`
+  * by renovate if you extend preset `github>statens-pensjonskasse/openapi-artifact-wrapper:renovate-swaggerhub-artifact`.
+* **Updating**: node script `update-api` will download `desiredVersion` of specification and update package.json + pom.xml
+* **Wrapping**: you should provide package.json and pom.xml with basic setup, a bootstrap script may some day find its way to this repo to help with that.
+* **Publishing**: node publish is fine, script `mvn-deploy` will deploy properly qualified and typed Maven artifacts:  
+  * some-api.json deployed with classifier=openapi, type=json
+  * some-api.yaml deployed with classifier=openapi, type=yaml
 
-**Track**: Repo has renovate script to update `api.json` when new version is found on swaggerhub.  
+Reusable workflows are chained (so you just pick the 1 that fits) and does the following:  
+1. `api-versioning.yml` checks if git tag matching api version is found, output released=true if so
+2. `api-release.yml` uses `api-versioning.yml`, performs a release if not released already, output release-performed=true/false
+3. `api-publish.yml` uses `api-release.yml`, publishes artifacts if a new release was performed
 
-**Wrap**:   
+Reusable workflows generally use the scripts, the scripts may also be run locally on a developer PC with appropriate Node installation, like so:  
+`npx @statens-pensjonskasse/openapi-artifact-wrapper <command>` or `node openapi-artifact-cli <command>`  
 
-**Artifacts**:  
-*   github reusable workflows: TODO
-*   npm cmd scripts: `@statens-pensjonskasse/openapi-artifact-wrapper` npm package containing scripts used for above stated purposes
-
-Repository is owned by SPK Team "integrasjon-og-samhandling"
-
-Usage
------
-A nice start is `npx @statens-pensjonskasse/openapi-artifact-wrapper help`  
-Not entirely public: you (and ci-job) need a github token with read:packages to install the npm package.  
+Repo owned and maintained by SPK Team "integrasjon-og-samhandling".
 
 Development
 -----------
-node required for local development, maven only if you want to test deploy stuff manually.  
-`package.json` in the root is the published npm package.  
+This project is developed using node and `package.json` primarily, maven is needed only for testing deploy manually.  
 Open Pull requests for changes.  
+**BEWARE**: You must bump version (in package.json) as it is not upped by workflow
 
+Usage
+-----
+See functional example of use in [skatt-inntekt-api](https://github.com/statens-pensjonskasse/skatt-inntekt-api)  
+Suggested steps:  
+1.  Set up a node project with devDependency @statens-pensjonskasse/openapi-artifact-wrapper
+2.  `npm install`
+3.  Add file `openapi-artifact.json` (and specify contents)
+4.  run `node openapi-artifact-cli update-api` (or the npx version)
+5.  add .gitignore, renovate setup and workflows as you see fit
 
-TODO
-====
-### renovate preset
-```
-  "customManagers": [
-    {
-      "customType": "jsonata",
-      "description": "SwaggerHub APIs in package.json swaggerhubDependency, { \"<swaggerhub api url>\": \"<version>\" }",
-      "fileFormat": "json",
-      "managerFilePatterns": ["/^package\\.json$/"],
-      "matchStrings": [
-        "$each(swaggerhubDependency, function($v, $k) { { \"depName\": $k, \"currentValue\": $v } })"
-      ],
-      "datasourceTemplate": "custom.swaggerhub"
-    },
-    {
-      "customType": "jsonata",
-      "description": "SwaggerHub API in api-registry.json, desired version from registry was the latest on last scan",
-      "fileFormat": "json",
-      "managerFilePatterns": ["/^api-registry\\.json$/"],
-      "matchStrings": [
-        "{ \"depName\": registry, \"registryUrl\": registry, \"currentValue\": desiredVersion }"
-      ],
-      "datasourceTemplate": "custom.apiRegistry"
-    }
-  ],
-  "customDatasources": {
-    "swaggerhub": {
-      "defaultRegistryUrlTemplate": "{{packageName}}",
-      "transformTemplates": [
-        "{\"releases\": apis.{\"version\": properties[type='X-Version'].value}}"
-      ]
-    },
-    "apiRegistry": {
-      "transformTemplates": [
-        "{\"releases\": apis.{\"version\": properties[type='X-Version'].value}}"
-      ]
-    }
-  },
-```
+### openapi-artifact.json contents
+*  "registry": url to swaggerhub api endpoint returning versions of api ([like this](https://api.swaggerhub.com/apis/skatteetaten/inntekt-api))
+*  "desiredVersion": duh
+*  "localJson" + "localYaml": file names should match files in your package.json (and localJson must be used as parameter to `api-publish.yml` workflow)
 
-### reusable workflow
-The reusable workflow installs and runs a pinned tools version:
-on:
-  workflow_call:
-    inputs:
-      tools-version:
-        type: string
-        required: true
+### Note on use of openapi-artifact-wrapper
+Given that published npm scripts are found on github packages for organization "statens-pensjonskasse"  
+You (and ci-job) need a github token (PAT) with read:packages to install the npm package, and you may have a hard time using openapi-artifact-wrapper in CI workflows.
 
-permissions:
-  contents: write
-  packages: read
+If you are outside organization "statens-pensjonskasse", don't bother fixing, just fork the code you need.  
+If you are inside organization "statens-pensjonskasse", simplest option is to make api wrapping repository internal.
 
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+We may eventually be able to publish open source artifacts as well as code.
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          registry-url: https://npm.pkg.github.com
-
-      - name: Install API tools
-        env:
-          NODE_AUTH_TOKEN: ${{ github.token }}
-        run: npm install --no-save --ignore-scripts "@statens-pensjonskasse/openapi-artifact-wrapper@${{ inputs.tools-version }}"
-
-      - name: Update specification
-        run: npx --no-install openapi-artifact-wrapper update-spec
-A caller uses the workflow like this:
-jobs:
-  prepare:
-    uses: your-org/workflows/.github/workflows/api-prepare.yml@v1
-    with:
-      tools-version: 1.0.0
-    secrets: inherit
-Use a pinned package version rather than latest; this makes workflow executions reproducible. If every API repository already commits the tools package in devDependencies, the reusable workflow can run npm ci followed by npm run update-spec instead. That is even more reproducible because package-lock.json controls the exact tools version.
-I would also remove renovateApi() from the CLI. Renovate should update api-registry.json itself; the CLI should consume desiredVersion, download that specification, and synchronize package.json and pom.xml. This keeps responsibilities separate and makes the same CLI safe to use locally and in reusable workflows.
+### Note on licensing (of wrapped API)
+Respect the work of others and the LICENSE carried by wrapped Open API specifications.  
+**How**: check that license and only attach what is required or compatible with that license. Redo if license is changed in a new version of the API.
