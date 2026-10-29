@@ -11,10 +11,17 @@ Repository of tools used to track, update, wrap and publish Open API specificati
   * some-api.json deployed with classifier=openapi, type=json
   * some-api.yaml deployed with classifier=openapi, type=yaml
 
+**Note on Maven publish to Github**: fails in Github workflow at present, because it publishes specification files separately (using deploy-file)
+and github workflows do not support more that 1-stage deploy. This is possible to fix by generating pom with 1-stage publish, which will be done eventually.
+This is what Google AI told me, it is deduced from doc [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases): 
+"Once the very first file of a static release version (like 1.0.0) is completely processed, GitHub Packages locks down that version record and marks it as immutable.
+Even if you are trying to add a completely new file type that doesn't exist yet (e.g., adding a .zip when only a .jar exists), 
+GitHub Packages blocks the request because it views any new upload to an existing release coordinates block as an illegal historical mutation."  
+
 Reusable workflows are chained (so you just pick the 1 that fits) and does the following:  
 1. `api-versioning.yml` checks if git tag matching api version is found, output released=true if so
 2. `api-release.yml` uses `api-versioning.yml`, performs a release if not released already, output release-performed=true/false
-3. `api-publish.yml` uses `api-release.yml`, publishes artifacts if a new release was performed
+3. **defunct** `api-publish.yml` uses `api-release.yml`, publishes artifacts if a new release was performed
 
 Reusable workflows generally use the scripts, the scripts may also be run locally on a developer PC with appropriate Node installation, like so:  
 `npx @statens-pensjonskasse/openapi-artifact-wrapper <command>` or `node openapi-artifact-cli <command>`  

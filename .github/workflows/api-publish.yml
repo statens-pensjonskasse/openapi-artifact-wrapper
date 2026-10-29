@@ -57,6 +57,9 @@ jobs:
       - name: Publish artifacts
         id: publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.PAT_FOR_PACKAGES_ACCESS || secrets.GITHUB_TOKEN }} # node may need to install a package
+          # PAT_FOR_PACKAGES_ACCESS may have rights to read org packages, but maybe not rights to write this repos package :-(
+          # GITHUB_TOKEN has rights to this repo and package, but maybe not rights to read org packages
+          # so if caller needs to run npm ci / install, that should be a separate step with PAT_FOR_PACKAGES_ACCESS, and this step should only run npm publish / mvn deploy with GITHUB_TOKEN
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }} # maven should have no dependencies
         run: ${{ inputs.publish-command }}
