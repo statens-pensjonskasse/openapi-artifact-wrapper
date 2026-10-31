@@ -30,9 +30,22 @@ Repo owned and maintained by SPK Team "integrasjon-og-samhandling".
 
 Development
 -----------
-This project is developed using node and `package.json` primarily, maven is needed only for testing deploy manually.  
+Develop using node scripts primarily: `node ./openapi-artifact-cli.mjs help`  
+Maven is needed only for testing deploy manually  
 Open Pull requests for changes.  
-**BEWARE**: You must bump version (in package.json) as it is not upped by workflow
+
+**BEWARE**: Manually bump version (in package.json) as it is not upped by workflow
+
+### TODO
+fix maven deploy - if no pom, generate & use
+bootstrap openapi-artifact.json?
+bootstrapping openapi-artifact.json:  
+* groupId: no.spk.ios
+* distributionManagement
+* git stuff from cmd: `git remote get-url origin | sed -E 's/^git@([^:]+):/git+https:\/\/\1\//'`
+
+
+
 
 Usage
 -----
@@ -47,7 +60,7 @@ Suggested steps:
 ### openapi-artifact.json contents
 *  "registry": url to swaggerhub api endpoint returning versions of api ([like this](https://api.swaggerhub.com/apis/skatteetaten/inntekt-api))
 *  "desiredVersion": duh
-*  "localJson" + "localYaml": file names should match files in your package.json (and localJson must be used as parameter to `api-publish.yml` workflow)
+*  "artifactName": used to name artifacts (files) - should match files in your package.json (and localJson must be used as parameter to `api-publish.yml` workflow)
 
 ### Note on use of openapi-artifact-wrapper
 Given that published npm scripts are found on github packages for organization "statens-pensjonskasse"  

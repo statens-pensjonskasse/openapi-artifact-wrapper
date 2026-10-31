@@ -2,57 +2,62 @@
 // process API properties in openapi-artifact.json
 *****************************************************/
 
-import {readJsonFile, writeJsonFile, writeFile} from "./workdir.mjs";
+import {fetchJson, fetchYaml, readJsonFile, writeJsonFile, writeFile} from "./resourceIO.mjs";
 import {updatePackageVersion} from "./package.mjs";
-import {updatePomVersion} from "./mvn-deploy.mjs";
+import {updatePomVersion} from "./maven.mjs";
 import {apiVersions} from "./swaggerhub.mjs";
 
-const openapiArtifact = readJsonFile('openapi-artifact.json');
+const bootstrap = {
+        _README_: [
+            "********************************************************************",
+            "This is just an example configuration used to test and demo the tool",
+            "********************************************************************"
+        ],
+        registry: "https://api.swaggerhub.com/apis/skatteetaten/inntekt-api",
+        desiredVersion: "1.6.2",
+        artifactName: "xample-api",
+        distribution: {
+            id: "github",
+            registry: "https://npm.pkg.github.com",
+            path: "/statens-pensjonskasse/${project.artifactId}"
+        },
+        groupId: "no.spk.ios"
+    }
 
-const apiProperties = {
-    registry: openapiArtifact.registry,
-    desiredVersion: openapiArtifact.desiredVersion,
-    localJsonFile: openapiArtifact.localJson,
-    localYamlFile: openapiArtifact.localYaml
-};
+export function emitBootstrap() {
+    // TODO:  get details from git: git remote get-url origin | sed -E 's/^git@([^:]+):/git+https:\/\/\1\//'
+    writeJsonFile('openapi-artifact.json', bootstrap);
+}
 
-/** Path to files read/written are relative to where script is run from, not script location as for imports */
-const specFile = apiProperties.localJsonFile;
-const specYaml = apiProperties.localYamlFile;
-
-
-
-/** Downloaded specification, null if not downloaded yet */
-function readSpec() {
-    try {
-        return readJsonFile(specFile);
-    } catch (error) {
-        if (error.code !== 'ENOENT') {
-            throw error;
+/** Download specification for desired version, yaml and json format */
+export function openApiArtifact() {
+    const apiProperties = readJsonFile('openapi-artifact.json');
+    const specJson = `${apiProperties.artifactName}.json`;
+    const specYaml = `${apiProperties.artifactName}.yaml`;
+    return {
+        artifactName: apiProperties.artifactName,
+        groupId: apiProperties.groupId,
+        specJson,
+        specYaml,
+        registry: apiProperties.registry,
+        desiredVersion: apiProperties.desiredVersion,
+        downloadedVersion: () => {
+            try {
+                return readJsonFile(specJson);
+            } catch (error) {
+                if (error.code !== 'ENOENT') {
+                    throw error;
+                }
+                return null;
+            }
         }
-        return null;
-    }
-}
-
-async function fetchJson(url) {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-    }
-    return await response.json();
-}
-
-async function fetchYaml(url) {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-    }
-    return await response.text();
+    };
 }
 
 /** Download specification for desired version, yaml and json format */
 export async function updateSpec() {
-    const actualVersion = readSpec()?.info?.version;
+    const apiProperties = openApiArtifact()
+    const actualVersion = apiProperties.downloadedVersion();
     const desiredVersion = apiProperties.desiredVersion;
     if ( actualVersion === desiredVersion ) {
         console.log(`No update needed. Current version: ${actualVersion}, Desired version: ${desiredVersion}`);
@@ -65,12 +70,12 @@ export async function updateSpec() {
     const apiUrl = versions.url(apiProperties.desiredVersion);
 
     const yamlUrl = apiUrl + "/swagger.yaml";
-    writeFile(specYaml, await fetchYaml(yamlUrl));
-    console.log(`${yamlUrl} downloaded to ${specYaml}`);
+    writeFile(apiProperties.specYaml, await fetchYaml(yamlUrl));
+    console.log(`${yamlUrl} downloaded to ${apiProperties.specYaml}`);
 
     // json file is parsed for currently downloaded version, so we download it after yaml to avoid inconsistent versions
-    writeJsonFile(specFile, await fetchJson(apiUrl));
-    console.log(`${apiUrl} downloaded to ${specFile}`);
+    writeJsonFile(apiProperties.specJson, await fetchJson(apiUrl));
+    console.log(`${apiUrl} downloaded to ${apiProperties.specJson}`);
 
     updatePackageVersion(apiProperties.desiredVersion);
     updatePomVersion(apiProperties.desiredVersion);
@@ -78,13 +83,14 @@ export async function updateSpec() {
 
 /** Updates package.json swaggerhubDependency version */
 export async function renovateApi() {
+    const apiProperties = readJsonFile('openapi-artifact.json');
     const versions = await apiVersions(apiProperties.registry);
     if (apiProperties.desiredVersion === versions.latest) {
         console.log(`No update needed. Current version ${apiProperties.desiredVersion} is latest found on ${apiProperties.registry}`);
     } else {
         // til vi har landa på løsning for versjonering, oppdateres begge mulighetene
         const nextApiRegistry = {
-            ...openapiArtifact,
+            ...apiProperties,
             desiredVersion: versions.latest
         };
         writeJsonFile('openapi-artifact.json', nextApiRegistry);
@@ -92,11 +98,3 @@ export async function renovateApi() {
     }
 
 }
-
-
-export const ApiRegistry = {
-    specJson: apiProperties.localJsonFile,
-    specYaml: apiProperties.localYamlFile,
-    desiredVersion: apiProperties.desiredVersion,
-    downloadedVersion: readSpec()?.info?.version
-};

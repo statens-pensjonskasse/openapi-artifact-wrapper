@@ -29,7 +29,7 @@ jobs:
 
       - name: Find version in API specification
         id: apiversion
-        run: |
+        run: |  // TODO
           OPENAPI_SPEC_JSON=$( jq -er '.localJson' openapi-artifact.json )
           # OPENAPI_SPEC_JSON should be same as input, but I prefer to let caller specify
           API_VERSION=$( jq -er '.info.version' ${{ inputs.api-spec-json }} )

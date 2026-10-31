@@ -12,13 +12,14 @@
   "bin": {
     "openapi-artifact-cli": "openapi-artifact-cli.mjs"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "files": [
     "openapi-artifact-cli.mjs",
     "src"
   ],
-  "scripts": {
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/statens-pensjonskasse/openapi-artifact-wrapper.git"
