@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 
-import {emitBootstrap, renovateApi, updateSpec} from './src/openapi-artifact.mjs';
-import { deployToMaven, emitBootstrapPom } from './src/maven.mjs';
+import { bootstrap, deployToMaven, renovateApi, updateSpec } from './src/openapi-artifact.mjs';
 
 const [command, ...args] = process.argv.slice(2);
+/* Should you need:
 function groupId() {
     if (args[0])
         return args[0];
     throw new Error('Missing groupId argument, aborting');
 };
 const workingDir = process.cwd();
+*/
+
 const helpText = `
 
 From empty project: start with "node ./openapi-artifact-cli.mjs bootstrap some.group.id"
@@ -25,10 +27,8 @@ Commands:
 `;
 
 switch (command) {
-    
     case 'bootstrap':
-        emitBootstrap();  // workingDir);
-        emitBootstrapPom();  // workingDir);
+        await bootstrap();  // workingDir);
         break;
     case 'renovate-api':
         await renovateApi();  // workingDir);
