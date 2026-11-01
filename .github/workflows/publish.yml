@@ -19,8 +19,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://npm.pkg.github.com
@@ -30,7 +30,7 @@ jobs:
         id: get_version
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - name: GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           generate_release_notes: true
@@ -41,3 +41,13 @@ jobs:
           NODE_AUTH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.get_version.outputs.version }}
         run: npm publish
+      - name: Bump to next development version
+        run: |
+          npm version prepatch --preid=dev --no-git-tag-version
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add package.json package-lock.json
+          git commit -m "chore: bump development version [skip ci]"
+          git push origin HEAD:main

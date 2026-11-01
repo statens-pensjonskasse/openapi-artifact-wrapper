@@ -11,10 +11,18 @@ Repository of tools used to track, update, wrap and publish Open API specificati
   * some-api.json deployed with classifier=openapi, type=json
   * some-api.yaml deployed with classifier=openapi, type=yaml
 
+**Note on Maven publish to Github**: fails in Github workflow for separately publishing specification files (using deploy-file)
+and github workflows do not support more that 1-stage deploy.  
+Possible fix by generating pom with 1-stage publish, which will be done eventually.
+This is what Google AI told me, it is deduced from doc [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases): 
+"Once the very first file of a static release version (like 1.0.0) is completely processed, GitHub Packages locks down that version record and marks it as immutable.
+Even if you are trying to add a completely new file type that doesn't exist yet (e.g., adding a .zip when only a .jar exists), 
+GitHub Packages blocks the request because it views any new upload to an existing release coordinates block as an illegal historical mutation."  
+
 Reusable workflows are chained (so you just pick the 1 that fits) and does the following:  
 1. `api-versioning.yml` checks if git tag matching api version is found, output released=true if so
 2. `api-release.yml` uses `api-versioning.yml`, performs a release if not released already, output release-performed=true/false
-3. `api-publish.yml` uses `api-release.yml`, publishes artifacts if a new release was performed
+3. **defunct** `api-publish.yml` uses `api-release.yml`, publishes artifacts if a new release was performed
 
 Reusable workflows generally use the scripts, the scripts may also be run locally on a developer PC with appropriate Node installation, like so:  
 `npx @statens-pensjonskasse/openapi-artifact-wrapper <command>` or `node openapi-artifact-cli <command>`  
@@ -23,9 +31,16 @@ Repo owned and maintained by SPK Team "integrasjon-og-samhandling".
 
 Development
 -----------
-This project is developed using node and `package.json` primarily, maven is needed only for testing deploy manually.  
+Develop using node scripts primarily: `node ./openapi-artifact-cli.mjs help`  
+Start with generating bootstrap setup: `node ./openapi-artifact-cli.mjs bootstrap` (generates openapi-artifact.json)
+
+Maven is needed only for testing deploy manually  
 Open Pull requests for changes.  
-**BEWARE**: You must bump version (in package.json) as it is not upped by workflow
+
+**BEWARE**: After release, bump version (in package.json) manually as it is not upped by workflow
+
+### TODO
+
 
 Usage
 -----
@@ -40,7 +55,7 @@ Suggested steps:
 ### openapi-artifact.json contents
 *  "registry": url to swaggerhub api endpoint returning versions of api ([like this](https://api.swaggerhub.com/apis/skatteetaten/inntekt-api))
 *  "desiredVersion": duh
-*  "localJson" + "localYaml": file names should match files in your package.json (and localJson must be used as parameter to `api-publish.yml` workflow)
+*  "artifactName": used to name artifacts (files) - should match files in your package.json (and localJson must be used as parameter to `api-publish.yml` workflow)
 
 ### Note on use of openapi-artifact-wrapper
 Given that published npm scripts are found on github packages for organization "statens-pensjonskasse"  

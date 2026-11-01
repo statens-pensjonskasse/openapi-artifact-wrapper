@@ -2,7 +2,7 @@
  // common functions to process package.json (the published package in repository root)
  ***********************************************************************/
 
-import {readJsonFile, writeJsonFile} from "./workdir.mjs";
+import {readJsonFile, writeJsonFile} from "./resourceIO.mjs";
 
 export const packageJson = readJsonFile('package.json');
 
