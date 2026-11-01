@@ -1,11 +1,11 @@
-/**************************************************************************************************************************
-// maven-stuff, like deploy (=publish) Open API specification artifacts, and updating version in pom to reflect API version
-**************************************************************************************************************************/
+/*************************************
+// maven-stuff, like deploy (=publish)
+**************************************/
 
 import { execFileSync } from 'node:child_process';
 import { openApiArtifact } from './openapi-artifact.mjs';
-import { readFile, writeFile } from './resourceIO.mjs';
-import { bootstrapPom } from './pom-bootstrap.mjs';
+import { updatePomVersion } from './pom.mjs';
+
 
 const pomXmlPath = 'pom.xml';
 
@@ -18,6 +18,15 @@ function pomValue(expression) {
     throw new Error(`${expression} is not set in pom.xml`);
   }
   return value;
+}
+
+/** Deploys the specification to the Maven repository */
+function deployWithPom() {
+  const apiArtifact = openApiArtifact();
+  const version = apiArtifact.downloadedVersion();
+  updatePomVersion(version);
+
+  execFileSync('mvn', ['deploy'], { stdio: 'inherit' });
 }
 
 /** Deploys the specification to the Maven repository */
@@ -36,7 +45,6 @@ function deployWithoutPom() {
     `-Durl=${deploy2url}`,
     `-DpomFile=${pomXmlPath}`,
     '-DgeneratePom=false',
-    '-DuniqueVersion=false',
     `-Dversion=${version}`,
     '-Dclassifier=openapi',
   ];
@@ -45,25 +53,6 @@ function deployWithoutPom() {
   execFileSync('mvn', [...mvnOptions, '-Dtype=json', `-Dfile=${jsonFilePath}`], { stdio: 'inherit' });
 }
 
-/** Updates version in pom-file */
-export function updatePomVersion(desiredVersion) {
-  const pomXml = readFile(pomXmlPath);
-  const match = /<version>.+<!--API-VERSION-->/
-  const nextPomXml = pomXml.replace(match, `<version>${desiredVersion}<!--API-VERSION-->`);
-
-  if (nextPomXml === pomXml) {
-    console.log(`No update to pom.xml`);
-  } else {
-    writeFile(pomXmlPath, nextPomXml);
-  }
-}
-
-/** Emits a bootstrap pom.xml to working directory */
-export function emitBootstrapPom() {
-  const nextPomXml = bootstrapPom();
-  writeFile(pomXmlPath, nextPomXml);
-}
-
 export function deployToMaven() {
-  deployWithoutPom()
+  deployWithPom()
 }

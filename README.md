@@ -11,8 +11,9 @@ Repository of tools used to track, update, wrap and publish Open API specificati
   * some-api.json deployed with classifier=openapi, type=json
   * some-api.yaml deployed with classifier=openapi, type=yaml
 
-**Note on Maven publish to Github**: fails in Github workflow at present, because it publishes specification files separately (using deploy-file)
-and github workflows do not support more that 1-stage deploy. This is possible to fix by generating pom with 1-stage publish, which will be done eventually.
+**Note on Maven publish to Github**: fails in Github workflow for separately publishing specification files (using deploy-file)
+and github workflows do not support more that 1-stage deploy.  
+Possible fix by generating pom with 1-stage publish, which will be done eventually.
 This is what Google AI told me, it is deduced from doc [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases): 
 "Once the very first file of a static release version (like 1.0.0) is completely processed, GitHub Packages locks down that version record and marks it as immutable.
 Even if you are trying to add a completely new file type that doesn't exist yet (e.g., adding a .zip when only a .jar exists), 
@@ -31,20 +32,14 @@ Repo owned and maintained by SPK Team "integrasjon-og-samhandling".
 Development
 -----------
 Develop using node scripts primarily: `node ./openapi-artifact-cli.mjs help`  
+Start with generating bootstrap setup: `node ./openapi-artifact-cli.mjs bootstrap` (generates openapi-artifact.json)
+
 Maven is needed only for testing deploy manually  
 Open Pull requests for changes.  
 
-**BEWARE**: Manually bump version (in package.json) as it is not upped by workflow
+**BEWARE**: After release, bump version (in package.json) manually as it is not upped by workflow
 
 ### TODO
-fix maven deploy - if no pom, generate & use
-bootstrap openapi-artifact.json?
-bootstrapping openapi-artifact.json:  
-* groupId: no.spk.ios
-* distributionManagement
-* git stuff from cmd: `git remote get-url origin | sed -E 's/^git@([^:]+):/git+https:\/\/\1\//'`
-
-
 
 
 Usage

@@ -4,7 +4,7 @@
 
 import {fetchJson, fetchYaml, readJsonFile, writeJsonFile, writeFile} from "./resourceIO.mjs";
 import {updatePackageVersion} from "./package.mjs";
-import {updatePomVersion} from "./maven.mjs";
+import {updatePomVersion} from "./pom.mjs";
 import {apiVersions} from "./swaggerhub.mjs";
 
 const bootstrap = {
@@ -43,7 +43,7 @@ export function openApiArtifact() {
         desiredVersion: apiProperties.desiredVersion,
         downloadedVersion: () => {
             try {
-                return readJsonFile(specJson);
+                return readJsonFile(specJson).info?.version;
             } catch (error) {
                 if (error.code !== 'ENOENT') {
                     throw error;
