@@ -37,7 +37,7 @@ Start with generating bootstrap setup: `node ./openapi-artifact-cli.mjs bootstra
 Maven is needed only for testing deploy manually  
 Open Pull requests for changes.  
 
-**BEWARE**: After release, bump version (in package.json) manually as it may not be upped by workflow
+**BEWARE**: After release, bump version (in package.json) manually as it may not be upped by workflow: `npm version prepatch --preid=dev --no-git-tag-version`
 
 
 Usage
