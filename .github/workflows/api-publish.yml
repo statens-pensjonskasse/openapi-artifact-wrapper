@@ -34,10 +34,6 @@ on:
 jobs:
   release:
     uses: ./.github/workflows/api-release.yml
-    with:
-      npm-registry-url: ${{ inputs.npm-registry-url }}
-      node-version: ${{ inputs.node-version }}
-      github-org: ${{ inputs.github-org }}
 
   publish:
     runs-on: ubuntu-latest
@@ -52,6 +48,7 @@ jobs:
         with: # node is preinstalled on ubuntu-latest, but publish needs setup-node to configure registry and auth
           node-version: ${{ inputs.node-version }}
           registry-url: ${{ inputs.npm-registry-url }}
+          scope: ${{ inputs.github-org }}
       - uses: actions/setup-java@v6
         with:
           java-version: ${{ inputs.java-version }}

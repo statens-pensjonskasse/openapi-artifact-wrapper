@@ -61,6 +61,18 @@ function forceApiProperties() {
     }
 }
 
+function downloadedVersion() {
+    try {
+        const specJson = specFiles().specJson;
+        return readJsonFile(specJson).info?.version;
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            throw error;
+        }
+        return null;
+    }
+}
+
 export async function bootstrap() {
     const apiProperties = forceApiProperties();
     emitBootstrapPom(
@@ -72,18 +84,6 @@ export async function bootstrap() {
     await updateSpec();  // workingDir);
 }
 
-
-export function downloadedVersion() {
-    try {
-        const specJson = specFiles().specJson;
-        return readJsonFile(specJson).info?.version;
-    } catch (error) {
-        if (error.code !== 'ENOENT') {
-            throw error;
-        }
-        return null;
-    }
-}
 
 /** Download specification for desired version, yaml and json format */
 export async function updateSpec() {

@@ -2,22 +2,6 @@ name: Reusable workflow for API versioning (git tag versus API version)
 
 on:
   workflow_call:
-    inputs:
-      # Little reason to override inputs below:
-      # no code should be compiled or run with proper use of workflow
-      # auth is default GITHUB_TOKEN, so github packages will work, other registries might balk
-      npm-registry-url:
-        description: npm registry to publish to
-        type: string
-        default: https://npm.pkg.github.com
-      github-org:
-        description: GitHub organization
-        type: string
-        default: '@statens-pensjonskasse'
-      node-version:
-        description: Node version used
-        type: string
-        default: '24'
     outputs:
       apiversion:
         description: version of API
@@ -36,20 +20,12 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v7
-        with: # node is preinstalled on ubuntu-latest, but "npm ci" needs setup-node to configure registry and auth
-          node-version: ${{ inputs.node-version }}
-          registry-url: ${{ inputs.npm-registry-url }}
-          scope: ${{ inputs.github-org }}
 
       - name: Find version in API specification
         id: apiversion
-        env:
-          NODE_AUTH_TOKEN: ${{ github.token }}
         run: |
-          npm install
-          API_VERSION=$( node ./node_modules/.bin/openapi-artifact-cli api-version )
-          # API_VERSION=$( jq -er '.info.version' ${{ inputs.api-spec-json }} )
+          API_SPEC=$( jq -er '.artifactName' openapi-artifact.json ).json
+          API_VERSION=$( jq -er '.info.version' $API_SPEC )
           if [ -z "$API_VERSION" ] || [ "$API_VERSION" = "{}" ]; then
             echo "::error::Could not read version from API specification"
             exit 1
