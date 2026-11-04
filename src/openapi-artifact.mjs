@@ -25,30 +25,32 @@ const bootstrapJson = {
         groupId: "no.spk.ios"
     }
 
-function specFiles() {
+function openApiArtifact() {
     const apiArtifact = readJsonFile('openapi-artifact.json');
+    if (!apiArtifact.registry) {
+        throw new Error(`Missing registry in openapi-artifact.json`);
+    }
+    if (!apiArtifact.desiredVersion) {
+        throw new Error(`Missing desiredVersion in openapi-artifact.json`);
+    }
+    if (!apiArtifact.artifactName) {
+        throw new Error(`Missing artifactName in openapi-artifact.json`);
+    }
+    return apiArtifact;
+}
+
+function specFiles() {
+    const apiArtifact = openApiArtifact();
     return  {  
         specYaml: `${apiArtifact.artifactName}.yaml`,
         specJson: `${apiArtifact.artifactName}.json`
     }
 }
 
-function downloadedVersion() {
-    try {
-        const specJson = specFiles().specJson;
-        return readJsonFile(specJson).info?.version;
-    } catch (error) {
-        if (error.code !== 'ENOENT') {
-            throw error;
-        }
-        return null;
-    }
-}
-
 /** If openapi-artifact.json does not exist, create it with bootstrap content */
 function forceApiProperties() {
     try {
-        return readJsonFile('openapi-artifact.json');
+        return openApiArtifact();
     } catch (error) {
         if (error.code !== 'ENOENT') {
             throw error;
@@ -70,6 +72,18 @@ export async function bootstrap() {
     await updateSpec();  // workingDir);
 }
 
+
+export function downloadedVersion() {
+    try {
+        const specJson = specFiles().specJson;
+        return readJsonFile(specJson).info?.version;
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            throw error;
+        }
+        return null;
+    }
+}
 
 /** Download specification for desired version, yaml and json format */
 export async function updateSpec() {

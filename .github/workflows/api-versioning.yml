@@ -2,11 +2,6 @@ name: Reusable workflow for API versioning (git tag versus API version)
 
 on:
   workflow_call:
-    inputs:
-      api-spec-json:
-        description: Open API specification file in json - version is used to tag, release and publish.
-        type: string
-        required: true
     outputs:
       apiversion:
         description: version of API
@@ -22,19 +17,17 @@ jobs:
       apiversion: ${{ steps.apiversion.outputs.apiversion }}
       released: ${{ steps.goahead.outputs.released }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Find version in API specification
         id: apiversion
         run: |
-          OPENAPI_SPEC_JSON=$( jq -er '.localJson' openapi-artifact.json )
-          # OPENAPI_SPEC_JSON should be same as input, but I prefer to let caller specify
-          API_VERSION=$( jq -er '.info.version' ${{ inputs.api-spec-json }} )
+          API_VERSION=$( node ./openapi-artifact-cli.mjs api-version )
+          # API_VERSION=$( jq -er '.info.version' ${{ inputs.api-spec-json }} )
           if [ -z "$API_VERSION" ] || [ "$API_VERSION" = "{}" ]; then
-            echo "::error::Could not read version from {{ inputs.api-spec-json }}"
+            echo "::error::Could not read version from API speccification"
             exit 1
           fi
           echo "apiversion=$API_VERSION" >> $GITHUB_OUTPUT

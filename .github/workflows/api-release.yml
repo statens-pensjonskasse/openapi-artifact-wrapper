@@ -2,11 +2,6 @@ name: Reusable workflow for releasing API (if needed)
 
 on:
   workflow_call:
-    inputs:
-      api-spec-json:
-        description: Open API specification file - version is used to tag, release and publish.
-        type: string
-        required: true
     outputs:
       apiversion:
         description: version of API
@@ -18,8 +13,6 @@ on:
 jobs:
   versioning:
     uses: ./.github/workflows/api-versioning.yml
-    with:
-      api-spec-json: ${{ inputs.api-spec-json }}
 
   release:
     runs-on: ubuntu-latest

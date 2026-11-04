@@ -3,10 +3,6 @@ name: Reusable workflow for API publishing = creating a release and deploying ar
 on:
   workflow_call:
     inputs:
-      api-spec-json:
-        description: Open API specification file - version is used to tag, release and publish.
-        type: string
-        required: true
       publish-command:
         description: Command to publish artifacts (npm publish, mvn deploy, both, or some other strange command).
         type: string
@@ -34,8 +30,6 @@ on:
 jobs:
   release:
     uses: ./.github/workflows/api-release.yml
-    with:
-      api-spec-json: ${{ inputs.api-spec-json }}
 
   publish:
     runs-on: ubuntu-latest

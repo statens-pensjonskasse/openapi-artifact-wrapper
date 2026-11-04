@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { bootstrap, deployToMaven, renovateApi, updateSpec } from './src/openapi-artifact.mjs';
+import { bootstrap, downloadedVersion, deployToMaven, renovateApi, updateSpec } from './src/openapi-artifact.mjs';
 
 const [command, ...args] = process.argv.slice(2);
 /* Should you need:
@@ -19,6 +19,7 @@ then edit openapi-artifact.json and pom.xml as appropriate
 
 Usage: "node ./openapi-artifact-cli.mjs <command>"
 Commands:
+  api-version   Show the API version
   bootstrap     Emits openapi-artifact.json + pom.xml, needed for further work 
   renovate-api  Update the OpenAPI specification for the desired version
   update-api    Download the OpenAPI specification for the desired version
@@ -27,6 +28,14 @@ Commands:
 `;
 
 switch (command) {
+    case 'api-version':
+        const version = downloadedVersion();  // workingDir);
+        if (!version) {
+            process.exitCode = 1;
+            break;
+        }
+        console.log(version);
+        break;
     case 'bootstrap':
         await bootstrap();  // workingDir);
         break;

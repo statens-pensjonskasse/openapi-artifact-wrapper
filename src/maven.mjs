@@ -19,7 +19,15 @@ function pomValue(expression) {
   return value;
 }
 
-/** Deploys the specification to the Maven repository, but does not work on github - we need to deploy using pom */
+/** Deploys the specification to the Maven repository, but does not work on github - we need to deploy using pom:
+**Note on Maven publish to Github**: fails in Github workflow when publishing specification files separately (using deploy-file)
+and github workflows do not support more that 1-stage deploy.
+Possible fix by generating pom with 1-stage publish, which will be done eventually.
+This is what Google AI told me, it is deduced from doc [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases):
+"Once the very first file of a static release version (like 1.0.0) is completely processed, GitHub Packages locks down that version record and marks it as immutable.
+Even if you are trying to add a completely new file type that doesn't exist yet (e.g., adding a .zip when only a .jar exists),
+GitHub Packages blocks the request because it views any new upload to an existing release coordinates block as an illegal historical mutation."
+*/
 function deployWithoutPom(groupId, artifactId, version) {
   updatePomVersion(version);
   const deploy2url = pomValue('project.distributionManagement.repository.url');
