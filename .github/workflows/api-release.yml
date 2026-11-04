@@ -2,6 +2,18 @@ name: Reusable workflow for releasing API (if needed)
 
 on:
   workflow_call:
+    inputs:
+      # Little reason to override inputs below:
+      # no code should be compiled or run with proper use of workflow
+      # auth is default GITHUB_TOKEN, so github packages will work, other registries might balk
+      npm-registry-url:
+        description: npm registry to publish to
+        type: string
+        default: https://npm.pkg.github.com
+      node-version:
+        description: Node version used
+        type: string
+        default: '24'
     outputs:
       apiversion:
         description: version of API
@@ -13,6 +25,9 @@ on:
 jobs:
   versioning:
     uses: ./.github/workflows/api-versioning.yml
+    with:
+      npm-registry-url: ${{ inputs.npm-registry-url }}
+      node-version: ${{ inputs.node-version }}
 
   release:
     runs-on: ubuntu-latest

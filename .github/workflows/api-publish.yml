@@ -30,6 +30,9 @@ on:
 jobs:
   release:
     uses: ./.github/workflows/api-release.yml
+    with:
+      npm-registry-url: ${{ inputs.npm-registry-url }}
+      node-version: ${{ inputs.node-version }}
 
   publish:
     runs-on: ubuntu-latest
