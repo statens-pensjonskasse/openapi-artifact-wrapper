@@ -48,7 +48,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ github.token }}
         run: |
           npm install
-          API_VERSION=$( node ./openapi-artifact-cli.mjs api-version )
+          API_VERSION=$( node ./node_modules/.bin/openapi-artifact-cli api-version )
           # API_VERSION=$( jq -er '.info.version' ${{ inputs.api-spec-json }} )
           if [ -z "$API_VERSION" ] || [ "$API_VERSION" = "{}" ]; then
             echo "::error::Could not read version from API specification"
