@@ -24,6 +24,7 @@ jobs:
       - name: Find version in API specification
         id: apiversion
         run: |
+          npm ci
           API_VERSION=$( node ./openapi-artifact-cli.mjs api-version )
           # API_VERSION=$( jq -er '.info.version' ${{ inputs.api-spec-json }} )
           if [ -z "$API_VERSION" ] || [ "$API_VERSION" = "{}" ]; then
