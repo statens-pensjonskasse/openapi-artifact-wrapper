@@ -10,6 +10,10 @@ on:
         description: npm registry to publish to
         type: string
         default: https://npm.pkg.github.com
+      github-org:
+        description: GitHub organization
+        type: string
+        default: '@statens-pensjonskasse'
       node-version:
         description: Node version used
         type: string
@@ -36,6 +40,7 @@ jobs:
         with: # node is preinstalled on ubuntu-latest, but "npm ci" needs setup-node to configure registry and auth
           node-version: ${{ inputs.node-version }}
           registry-url: ${{ inputs.npm-registry-url }}
+          scope: ${{ inputs.github-org }}
 
       - name: Find version in API specification
         id: apiversion

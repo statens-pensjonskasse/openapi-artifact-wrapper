@@ -14,6 +14,10 @@ on:
         description: npm registry to publish to
         type: string
         default: https://npm.pkg.github.com
+      github-org:
+        description: GitHub organization
+        type: string
+        default: '@statens-pensjonskasse'
       node-version:
         description: Node version used
         type: string
@@ -33,6 +37,7 @@ jobs:
     with:
       npm-registry-url: ${{ inputs.npm-registry-url }}
       node-version: ${{ inputs.node-version }}
+      github-org: ${{ inputs.github-org }}
 
   publish:
     runs-on: ubuntu-latest
