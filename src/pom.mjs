@@ -25,13 +25,13 @@ const pomTemplate = `<?xml version="1.0" encoding="UTF-8"?>
     </licenses>
 
     <scm>
-        <url>https://github.com/statens-pensjonskasse/\${project.artifactId}</url>
+        <url>https://github.com/statens-pensjonskasse/\${project.artifactId}<!--REPO-PATH--></url>
     </scm>
 
     <distributionManagement>
         <repository>
             <id>github</id>
-            <url>https://maven.pkg.github.com/statens-pensjonskasse/\${project.artifactId}</url>
+            <url>https://maven.pkg.github.com/statens-pensjonskasse/\${project.artifactId}<!--REPO-PATH--></url>
         </repository>
     </distributionManagement>
 
@@ -71,20 +71,35 @@ const pomTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 
 /** Emits a bootstrap pom.xml based on template above to working directory */
-export function emitBootstrapPom(groupId, artifactId) {
-    // TODO: get more stuff from openapi-artifact.json
+export function establishPom(
+    groupId,
+    artifactId,
+    repoPath
+) {
+    try {
+        const pomXml = readFile(pomXmlPath);
+        console.log(`pom.xml exists, not written.`);
+        return;
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            throw error;
+        }
+    }
 
     const matchGroup = /<groupId>.+<!--API-GROUP-->/
     const matchName  = /<artifactId>.+<!--API-NAME-->/
     const matchYaml  = /<file>.+\.yaml<!--API-YAML-->/
     const matchJson  = /<file>.+\.json<!--API-JSON-->/
+    const matchPath  = /github.com\/.+<!--REPO-PATH-->/
     const nextPomXml = pomTemplate
         .replace(matchGroup, `<groupId>${groupId}<!--API-GROUP-->`)
         .replace(matchName,  `<artifactId>${artifactId}<!--API-NAME-->`)
         .replace(matchJson, `<file>${artifactId}.json<!--API-JSON-->`)
-        .replace(matchYaml, `<file>${artifactId}.yaml<!--API-YAML-->`);
+        .replace(matchYaml, `<file>${artifactId}.yaml<!--API-YAML-->`)
+        .replace(matchPath, `github.com/${repoPath}<!--REPO-PATH-->`);
 
     writeFile(pomXmlPath, nextPomXml);
+    console.log(`pom.xml generated with bootstrap content. Please edit to match your API and project.`);
 }
 
 /** Updates version in pom-file */
@@ -94,8 +109,9 @@ export function updatePomVersion(desiredVersion) {
     const nextPomXml = pomXml.replace(match, `<version>${desiredVersion}<!--API-VERSION-->`);
 
     if (nextPomXml === pomXml) {
-        console.log(`No update to pom.xml`);
+        console.log(`pom.xml not updated. Current version: ${desiredVersion}`);
     } else {
         writeFile(pomXmlPath, nextPomXml);
+        console.log(`pom.xml updated to desired version: ${desiredVersion}`);
     }
 }
