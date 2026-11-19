@@ -4,22 +4,25 @@ openapi-artifact-wrapper
 Repository of tools used to track, update, wrap and publish Open API specifications on swaggerhub:  
 * **Track (renovate)**: bump `desiredVersion` (in `openapi-artifact.json`) when a newer version of API is available on swaggerhub
   * manually with script `renovate-api`
-  * by renovate if you extend preset `github>statens-pensjonskasse/openapi-artifact-wrapper:renovate-swaggerhub-artifact`.
+  * by renovate preset `github>statens-pensjonskasse/openapi-artifact-wrapper:renovate-swaggerhub-artifact`.
 * **Update**: node script `update-api` will download `desiredVersion` of specification and update package.json + pom.xml
 * **Wrap**: a bootstrap script generates required openapi-artifact.json and pom.xml (package.json is not touched).
-* **Publish**: node publish is fine, script `mvn-deploy` will deploy properly qualified and typed Maven artifacts:  
+* **Publish**: node script `mvn-deploy` will deploy classified and typed Maven artifacts:  
   * some-api.json deployed with classifier=openapi, type=json
   * some-api.yaml deployed with classifier=openapi, type=yaml
 
+### node scripts
+Scripts  are used from reusable workflows and may be run locally on a developer PC with appropriate Node installation, like so:  
+* `node openapi-artifact-cli.mjs help`
+* `npx @statens-pensjonskasse/openapi-artifact-wrapper help`
 
-Reusable workflows are chained (so you just pick the 1 that fits) and does the following:  
-1. `api-versioning.yml` checks if git tag matching api version is found, output released=true if so
+### Reusable workflows
+Reusable workflows are chained from top to bottom:  
+1. `api-versioning.yml` output released=true if git tag matching api version is found
 2. `api-release.yml` uses `api-versioning.yml`, performs a release if not released already, output release-performed=true/false
 3. `api-publish.yml` uses `api-release.yml`, publishes artifacts if a new release was performed
 
-Reusable workflows generally use the scripts, the scripts may also be run locally on a developer PC with appropriate Node installation, like so:  
-`node openapi-artifact-cli.mjs help` or `npx @statens-pensjonskasse/openapi-artifact-wrapper <command>`  
-
+### Owner and maintainer
 Repo owned and maintained by SPK Team "integrasjon-og-samhandling".
 
 Development
@@ -39,8 +42,8 @@ See functional example of use in [skatt-inntekt-api](https://github.com/statens-
 Suggested steps:  
 1.  Set up a node project with devDependency @statens-pensjonskasse/openapi-artifact-wrapper
 2.  `npm install && node openapi-artifact-cli.mjs bootstrap`
-3.  Edit `openapi-artifact.json` as appropriate
-4.  run `node openapi-artifact-cli update-api` (or the npx version)
+3.  Edit `openapi-artifact.json` and `pom.xml` as appropriate
+4.  run `node openapi-artifact-cli update-api`
 5.  add .gitignore, renovate setup and workflows as you see fit
 
 ### openapi-artifact.json contents

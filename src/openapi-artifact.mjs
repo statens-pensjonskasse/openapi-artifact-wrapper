@@ -2,28 +2,12 @@
 // process API properties in openapi-artifact.json
 *****************************************************/
 
-import {fetchJson, fetchYaml, readJsonFile, writeJsonFile, writeFile} from "./resourceIO.mjs";
-import {updatePackageVersion} from "./package.mjs";
+import { github } from "./git.mjs";
 import { deploy } from "./maven.mjs";
-import {emitBootstrapPom, updatePomVersion} from "./pom.mjs";
+import {updatePackageVersion} from "./package.mjs";
+import {establishPom, updatePomVersion} from "./pom.mjs";
+import {fetchJson, fetchYaml, readJsonFile, writeJsonFile, writeFile} from "./resourceIO.mjs";
 import {apiVersions} from "./swaggerhub.mjs";
-
-const bootstrapJson = {
-        _README_: [
-            "*************************************************************************",
-            "Bootstrap example configuration should be edited to match API and project",
-            "*************************************************************************"
-        ],
-        registry: "https://api.swaggerhub.com/apis/skatteetaten/inntekt-api",
-        desiredVersion: "1.6.2",
-        artifactName: "xample-api",
-        distribution: {
-            id: "github",
-            registry: "https://npm.pkg.github.com",
-            path: "/statens-pensjonskasse/${project.artifactId}"
-        },
-        groupId: "no.spk.ios"
-    }
 
 function openApiArtifact() {
     const apiArtifact = readJsonFile('openapi-artifact.json');
@@ -47,17 +31,40 @@ function specFiles() {
     }
 }
 
+function bootstrapJson() {
+    return {
+        _README_: [
+            "*************************************************************************",
+            "Bootstrap example configuration should be edited to match API and project",
+            "*************************************************************************"
+        ],
+        registry: "https://api.swaggerhub.com/apis/skatteetaten/inntekt-api",
+        desiredVersion: "1.6.2",
+        artifactName: github.repo.name,
+        distribution: {
+            id: "github",
+            uri: "https://npm.pkg.github.com"
+        },
+        maven: {
+            groupId: "no.spk.ios",
+            artifactId: github.repo.name,
+            repoPath: github.repo.path
+        }
+    };
+}
+
+
 /** If openapi-artifact.json does not exist, create it with bootstrap content */
-function forceApiProperties() {
+function establishApiProperties() {
     try {
         return openApiArtifact();
     } catch (error) {
         if (error.code !== 'ENOENT') {
             throw error;
         }
-        // TODO:  get details from git remote get-url origin | sed -E 's/^git@([^:]+):/git+https:\/\/\1\//'
-        writeJsonFile('openapi-artifact.json', bootstrapJson);
-        return forceApiProperties()
+        writeJsonFile('openapi-artifact.json', bootstrapJson());
+        console.log(`openapi-artifact.json generated with bootstrap content. Please edit to match your API and project.`);
+        return establishApiProperties()
     }
 }
 
@@ -74,10 +81,11 @@ function downloadedVersion() {
 }
 
 export async function bootstrap() {
-    const apiProperties = forceApiProperties();
-    emitBootstrapPom(
-        apiProperties.groupId,
-        apiProperties.artifactName
+    const apiProperties = establishApiProperties();
+    establishPom(
+        apiProperties.maven.groupId,
+        apiProperties.maven.artifactId,
+        apiProperties.maven.repoPath
     );
     // might as well update to latest & greatest
     await renovateApi();  // workingDir);
@@ -87,11 +95,11 @@ export async function bootstrap() {
 
 /** Download specification for desired version, yaml and json format */
 export async function updateSpec() {
-    const apiProperties = forceApiProperties()
+    const apiProperties = establishApiProperties()
     const actualVersion = downloadedVersion();
     const desiredVersion = apiProperties.desiredVersion;
     if ( actualVersion === desiredVersion ) {
-        console.log(`No update needed. Current version: ${actualVersion}, Desired version: ${desiredVersion}`);
+        console.log(`API spec not updated. Current version: ${actualVersion}, Desired version: ${desiredVersion}`);
         return;
     } else {
         console.log(`Updating API spec to version ${desiredVersion}`);
@@ -116,10 +124,10 @@ export async function updateSpec() {
 
 /** Updates package.json version */
 export async function renovateApi() {
-    const apiProperties = forceApiProperties();
+    const apiProperties = establishApiProperties();
     const versions = await apiVersions(apiProperties.registry);
     if (apiProperties.desiredVersion === versions.latest) {
-        console.log(`No update needed. Current version ${apiProperties.desiredVersion} is latest found on ${apiProperties.registry}`);
+        console.log(`openapi-artifact.json not updated, desiredVersion ${apiProperties.desiredVersion} is latest found on ${apiProperties.registry}`);
     } else {
         // til vi har landa på løsning for versjonering, oppdateres begge mulighetene
         const nextApiRegistry = {
@@ -127,7 +135,7 @@ export async function renovateApi() {
             desiredVersion: versions.latest
         };
         writeJsonFile('openapi-artifact.json', nextApiRegistry);
-        console.log(`Updated desiredVersion in openapi-artifact.json: ${versions.latest}`);
+        console.log(`openapi-artifact.json updated with desiredVersion: ${versions.latest}`);
     }
 
 }

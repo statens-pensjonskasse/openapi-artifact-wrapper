@@ -1,6 +1,6 @@
-/***********************************************************************
-// scripts for fetching urls and reading / writeing to working directory
-************************************************************************/
+/**********************************************************************
+// scripts for fetching urls and reading / writing to working directory
+***********************************************************************/
 
 import {readFileSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
