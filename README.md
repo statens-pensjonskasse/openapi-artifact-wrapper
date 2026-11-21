@@ -1,20 +1,20 @@
 openapi-artifact-wrapper
 ========================
 
-Repository of tools used to track, update, wrap and publish Open API specifications on swaggerhub:  
-* **Track (renovate)**: bump `desiredVersion` (in `openapi-artifact.json`) when a newer version of API is available on swaggerhub
-  * manually with script `renovate-api`
-  * by renovate preset `github>statens-pensjonskasse/openapi-artifact-wrapper:renovate-swaggerhub-artifact`.
-* **Update**: node script `update-api` will download `desiredVersion` of specification and update package.json + pom.xml
-* **Wrap**: a bootstrap script generates required openapi-artifact.json and pom.xml (package.json is not touched).
-* **Publish**: node script `mvn-deploy` will deploy classified and typed Maven artifacts:  
-  * some-api.json deployed with classifier=openapi, type=json
-  * some-api.yaml deployed with classifier=openapi, type=yaml
+Node cli can emit and manipulate pom.xml used to publish Maven artifacts of Open API specification.
 
-### node scripts
-Scripts  are used from reusable workflows and may be run locally on a developer PC with appropriate Node installation, like so:  
+How to use / getting started
+----------------------------
+### Node scripts
+Scripts may be run on ci or locally on developer PC with appropriate Node installation, like so:  
 * `node openapi-artifact-cli.mjs help`
 * `npx @statens-pensjonskasse/openapi-artifact-wrapper help`
+
+Get started by generating bootstrap setup: `node ./openapi-artifact-cli.mjs bootstrap some.group.id`, then edit generated pom.xml as appropriate.  
+Example of use in [skatt-inntekt-api](https://github.com/statens-pensjonskasse/skatt-inntekt-api)  
+
+**Note**: artifact published to github packages under organization "statens-pensjonskasse" may not be available outside of SPK.  
+...so until we have fixed that, fork the repo and use the code.
 
 ### Reusable workflows
 Reusable workflows are chained from top to bottom:  
@@ -22,47 +22,27 @@ Reusable workflows are chained from top to bottom:
 2. `api-release.yml` uses `api-versioning.yml`, performs a release if not released already, output release-performed=true/false
 3. `api-publish.yml` uses `api-release.yml`, publishes artifacts if a new release was performed
 
-### Owner and maintainer
-Repo owned and maintained by SPK Team "integrasjon-og-samhandling".
+
+License, contact, support
+-------------------------
+[MIT](LICENSE).  
+Repo owned and maintained by SPK Team "integrasjon-og-samhandling".  
+Errors, problems and wishes may be reported as [issue on GitHub](https://github.com/statens-pensjonskasse/openapi-artifact-wrapper/issues).
 
 Development
 -----------
-Develop using node scripts primarily: `node ./openapi-artifact-cli.mjs help`  
-Start with generating bootstrap setup: `node ./openapi-artifact-cli.mjs bootstrap` (generates openapi-artifact.json)
+Develop using node scripts primarily: `node ./openapi-artifact-cli.mjs help`
 
 Maven is needed only for testing deploy manually  
 Open Pull requests for changes.  
 
 **BEWARE**: After release, bump version (in package.json) manually as it may not be upped by workflow: `npm version prepatch --preid=dev --no-git-tag-version`
 
+### TODO
+mvn publish by pom  
+workflow `api-release.yml` must check preconditions  
+remove workflow `api-publish.yml`
 
-Usage
------
-See functional example of use in [skatt-inntekt-api](https://github.com/statens-pensjonskasse/skatt-inntekt-api)  
-Suggested steps:  
-1.  Set up a node project with devDependency @statens-pensjonskasse/openapi-artifact-wrapper
-2.  `npm install && node openapi-artifact-cli.mjs bootstrap`
-3.  Edit `openapi-artifact.json` and `pom.xml` as appropriate
-4.  run `node openapi-artifact-cli update-api`
-5.  add .gitignore, renovate setup and workflows as you see fit
-
-### openapi-artifact.json contents
-*  "registry": url to swaggerhub api endpoint returning versions of api ([like this](https://api.swaggerhub.com/apis/skatteetaten/inntekt-api))
-*  "desiredVersion": duh
-*  "artifactName": used to name artifacts (files) - should match files in your package.json
-
-### Note on use of openapi-artifact-wrapper
-Given that published npm scripts are found on github packages for organization "statens-pensjonskasse"  
-You (and ci-job) need a github token (PAT) with read:packages to install the npm package, and you may have a hard time using openapi-artifact-wrapper in CI workflows.
-
-If you are outside organization "statens-pensjonskasse", don't bother fixing, just fork the code you need.  
-If you are inside organization "statens-pensjonskasse", simplest option is to make api wrapping repository internal.
-
-We may eventually be able to publish open source artifacts as well as code.
-
-### Note on licensing (of wrapped API)
-Respect the work of others and the LICENSE carried by wrapped Open API specifications.  
-**How**: check that license and only attach what is required or compatible with that license. Redo if license is changed in a new version of the API.
 
 ### SNAPSHOTs and development versions
 Should you care to publish SNAPSHOT/development versions of a wrapped API artifact, you must do so manually
@@ -77,7 +57,7 @@ mvn install:install-file \
 
 #### Node
 ```
-npm version prepatch --preid=alpha --no-git-tag-version
-npm publish --tag alpha
+npm version prepatch --preid=beta --no-git-tag-version
+npm publish --tag beta
 git checkout package.json package-lock.json # reset
 ```

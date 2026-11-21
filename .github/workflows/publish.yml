@@ -1,43 +1,15 @@
-name: Release and publish Node.js package for this repository
+name: Build project, release and publish if appropriate
 
 on:
   push:
-    branches: 
-      - main
-    paths:
-      - package.json
-
-permissions:
-  contents: write
-  packages: write
-
-concurrency:
-  group: publish-node-package
-  cancel-in-progress: false
+  workflow_dispatch:
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 26
-          registry-url: https://npm.pkg.github.com
-          scope: '@statens-pensjonskasse'
-      - run: npm ci
-      - name: Get version to use
-        id: get_version
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-      - name: GitHub release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ steps.get_version.outputs.version }}
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-      - name: Publish to GitHub Packages
-        env:
-          NODE_AUTH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.get_version.outputs.version }}
-        run: npm publish
+  build:
+    uses: statens-pensjonskasse/public-actions-library/.github/workflows/build-library-node.yaml@1b9bc926ff226735b12a58c287542d73dc49371d # v0.3.9
+    permissions:
+      contents: write
+      packages: write
+    secrets: inherit
+    with:
+      node-version: "26"

@@ -2,7 +2,10 @@
 // Templated Maven pom
 **********************/
 
-import {readFile, writeFile} from "./resourceIO.mjs";
+import { execFileSync } from 'node:child_process';
+import { api } from "./api.mjs";
+import { exists, readFile, writeFile } from "./fileIO.mjs";
+import { github } from "./git.mjs";
 
 
 const pomXmlPath = 'pom.xml';
@@ -12,26 +15,20 @@ const pomTemplate = `<?xml version="1.0" encoding="UTF-8"?>
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- BEWARE: NOT A MAVEN PROJECT, pom is used and manipulated by scripts -->
-    <groupId>no.spk.ios<!--API-GROUP--></groupId>
-    <artifactId>openapi-artifact-wrapper<!--API-NAME--></artifactId>
+    <!-- BEWARE: pom is generated and manipulated by scripts, leave markers (comments) untouched -->
+    <groupId>some.group<!--API-GROUP--></groupId>
+    <artifactId>artifact<!--API-NAME--></artifactId>
     <version>0.0.0<!--API-VERSION--></version>
     <packaging>pom</packaging>
 
-    <licenses>
-        <license>
-            <comments>The Open API specification contained in artifacts is downloaded unmodified from Swaggerhub. Statens pensjonskasse grants no licence to it.</comments>
-        </license>
-    </licenses>
-
     <scm>
-        <url>https://github.com/statens-pensjonskasse/\${project.artifactId}<!--REPO-PATH--></url>
+        <url>https://github.com/some-organization/\${project.artifactId}<!--REPO-PATH--></url>
     </scm>
 
     <distributionManagement>
         <repository>
             <id>github</id>
-            <url>https://maven.pkg.github.com/statens-pensjonskasse/\${project.artifactId}<!--REPO-PATH--></url>
+            <url>https://maven.pkg.github.com/some-organization/\${project.artifactId}<!--DISTRO-PATH--></url>
         </repository>
     </distributionManagement>
 
@@ -51,15 +48,12 @@ const pomTemplate = `<?xml version="1.0" encoding="UTF-8"?>
                         <configuration>
                             <artifacts>
                                 <artifact>
-                                    <file>openapi-artifact-wrapper.yaml<!--API-YAML--></file>
+                                    <!-- yaml specification is primary, should not be deleted -->
+                                    <file>artifact.yaml<!--API-YAML--></file>
                                     <type>yaml</type>
                                     <classifier>openapi</classifier>
                                 </artifact>
-                                <artifact>
-                                    <file>openapi-artifact-wrapper.json<!--API-JSON--></file>
-                                    <type>json</type>
-                                    <classifier>openapi</classifier>
-                                </artifact>
+                                <!-- Feel free to add artifact with type=json as well -->
                             </artifacts>
                         </configuration>
                     </execution>
@@ -67,36 +61,51 @@ const pomTemplate = `<?xml version="1.0" encoding="UTF-8"?>
             </plugin>
         </plugins>
     </build>
-</project>
-`;
+</project>`;
+
+/** Updates version in pom-file */
+function updateVersion(pomXml, desiredVersion) {
+    const match = /<version>.+<!--API-VERSION-->/
+    return pomXml.replace(match, `<version>${desiredVersion}<!--API-VERSION-->`);
+}
+
+/** Value of a pom expression as resolved by maven, e.g. project.distributionManagement.repository.url */
+function pomValue(expression) {
+    const value = execFileSync('mvn', [
+        'help:evaluate', `-Dexpression=${expression}`, '-q', '-DforceStdout',   // '-f', pomXmlPath,
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    if (!value || value === 'null' || value.startsWith('null object')) {
+        throw new Error(`${expression} is not set in pom.xml`);
+    }
+    return value;
+}
+
+/** version in pom */
+export function pomVersion() {
+    return pomValue('project.version');
+}
 
 /** Emits a bootstrap pom.xml based on template above to working directory */
-export function establishPom(
-    groupId,
-    artifactId,
-    repoPath
-) {
-    try {
-        const pomXml = readFile(pomXmlPath);
+export function writeBootstrapPom(groupId) {
+    if (exists(pomXmlPath)) {
         console.log(`pom.xml exists, not written.`);
         return;
-    } catch (error) {
-        if (error.code !== 'ENOENT') {
-            throw error;
-        }
     }
+
+    const repoPath = github.repo.path;
 
     const matchGroup = /<groupId>.+<!--API-GROUP-->/
     const matchName  = /<artifactId>.+<!--API-NAME-->/
     const matchYaml  = /<file>.+\.yaml<!--API-YAML-->/
-    const matchJson  = /<file>.+\.json<!--API-JSON-->/
-    const matchPath  = /github.com\/.+<!--REPO-PATH-->/
+    const matchRepo  = /github.com\/.+<!--REPO-PATH-->/
+    const matchDist  = /github.com\/.+<!--DISTRO-PATH-->/
+    
     const nextPomXml = pomTemplate
         .replace(matchGroup, `<groupId>${groupId}<!--API-GROUP-->`)
-        .replace(matchName,  `<artifactId>${artifactId}<!--API-NAME-->`)
-        .replace(matchJson, `<file>${artifactId}.json<!--API-JSON-->`)
-        .replace(matchYaml, `<file>${artifactId}.yaml<!--API-YAML-->`)
-        .replace(matchPath, `github.com/${repoPath}<!--REPO-PATH-->`);
+        .replace(matchName,  `<artifactId>${api.artifactId}<!--API-NAME-->`)
+        .replace(matchYaml, `<file>${api.yamlSpec}<!--API-YAML-->`)
+        .replace(matchRepo, `github.com/${repoPath}<!--REPO-PATH-->`)
+        .replace(matchDist, `github.com/${repoPath}<!--DISTRO-PATH-->`);
 
     writeFile(pomXmlPath, nextPomXml);
     console.log(`pom.xml generated with bootstrap content. Please edit to match your API and project.`);
@@ -105,8 +114,7 @@ export function establishPom(
 /** Updates version in pom-file */
 export function updatePomVersion(desiredVersion) {
     const pomXml = readFile(pomXmlPath);
-    const match = /<version>.+<!--API-VERSION-->/
-    const nextPomXml = pomXml.replace(match, `<version>${desiredVersion}<!--API-VERSION-->`);
+    const nextPomXml = updateVersion(pomXml, desiredVersion);
 
     if (nextPomXml === pomXml) {
         console.log(`pom.xml not updated. Current version: ${desiredVersion}`);

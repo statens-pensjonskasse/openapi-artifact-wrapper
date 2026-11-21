@@ -1,6 +1,6 @@
 {
   "name": "@statens-pensjonskasse/openapi-artifact-wrapper",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.5",
   "description": "CLI tools for wrapping an Open API specification in artifact (npm + mvn)",
   "license": "MIT",
   "_README_": [
@@ -21,6 +21,9 @@
     "src"
   ],
   "scripts": {},
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/statens-pensjonskasse/openapi-artifact-wrapper.git"

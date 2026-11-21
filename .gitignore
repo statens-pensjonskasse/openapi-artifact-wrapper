@@ -2,9 +2,8 @@
 target/
 
 ### files emitted from testing
-openapi-artifact.json
 pom.xml
-openapi-artifact-wrapper.json
+openapi-artifact-wrapper.yaml
 openapi-artifact-wrapper.yaml
 
 ### node
