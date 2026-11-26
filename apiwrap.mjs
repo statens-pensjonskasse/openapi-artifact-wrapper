@@ -8,17 +8,18 @@ import {Version} from "./src/Version.mjs";
 
 const helpText = `
 
-From empty project: start with "node ./openapi-artifact-cli.mjs bootstrap some.group.id"
+From empty project: start with "node ./apiwrap.mjs bootstrap some.group.id"
 then edit pom.xml as appropriate
 
-Usage: "node ./openapi-artifact-cli.mjs <command> parameters..."
+Usage: "node ./apiwrap.mjs <command> parameters..."
 Commands:
   bootstrap <groupId>   Emits bootstrap pom.xml given groupId, other values derived from git
   update                Updates version in pom.xml and package.json to API version from local YAML
   verify                Fails if not versions are same across API, pom.xml and package.json
+
+  diff                  Show diff of API (yaml) since last release tag
   greatest              Emits greatest release tag in git, e.g. v1.2.3
   releases              List all release tags in git
-  diff                  Show diff of API (yaml) since last release tag
   release-ready         Emits version to release if API version is upped since last (tag), and version aligned in project files.
                         Fails otherwise
   help                  Show this help message
@@ -32,7 +33,7 @@ function verifyVersions() {
     if (apiVer === pomVer && apiVer === pkgVer) {
         return true;
     }
-    console.error(`Unaligned versions! API: ${apiVer}, pom.xml: ${pomVer}, package.json: ${pkgVer}`);
+    console.error(`Unaligned versions! ${api.yamlSpec}: ${apiVer}, pom.xml: ${pomVer}, package.json: ${pkgVer}`);
     return false;
 }
 

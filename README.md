@@ -7,10 +7,10 @@ How to use / getting started
 ----------------------------
 ### Node scripts
 Scripts may be run on ci or locally on developer PC with appropriate Node installation, like so:  
-* `node openapi-artifact-cli.mjs help`
-* `npx @statens-pensjonskasse/openapi-artifact-wrapper help`
+* `node apiwrap.mjs help`
+* `npm install @statens-pensjonskasse/openapi-artifact-wrapper && npx @statens-pensjonskasse/openapi-artifact-wrapper help`
 
-Get started by generating bootstrap setup: `node ./openapi-artifact-cli.mjs bootstrap some.group.id`, then edit generated pom.xml as appropriate.  
+Get started by generating bootstrap setup: `node ./apiwrap.mjs bootstrap some.group.id`, then edit generated pom.xml as appropriate.  
 Example of use in [skatt-inntekt-api](https://github.com/statens-pensjonskasse/skatt-inntekt-api)  
 
 **Note**: artifact published to github packages under organization "statens-pensjonskasse" may not be available outside of SPK.  
@@ -18,9 +18,8 @@ Example of use in [skatt-inntekt-api](https://github.com/statens-pensjonskasse/s
 
 ### Reusable workflows
 Reusable workflows are chained from top to bottom:  
-1. `api-versioning.yml` output released=true if git tag matching api version is found
-2. `api-release.yml` uses `api-versioning.yml`, performs a release if not released already, output release-performed=true/false
-3. `api-publish.yml` uses `api-release.yml`, publishes artifacts if a new release was performed
+1. `build-api.yml` by default runs `npm run install && npm run tbv && git add -A && git commit -am"chore: update project files`
+2. `publish-api.yml` by default runs `npm run ci && npm run verify`, then release and publish/deploy artifacts
 
 
 License, contact, support
@@ -31,17 +30,11 @@ Errors, problems and wishes may be reported as [issue on GitHub](https://github.
 
 Development
 -----------
-Develop using node scripts primarily: `node ./openapi-artifact-cli.mjs help`
-
-Maven is needed only for testing deploy manually  
+Develop using node scripts primarily: `node ./apiwrap.mjs help`, Maven needed only for testing / deploying manually.  
 Open Pull requests for changes.  
-
-**BEWARE**: After release, bump version (in package.json) manually as it may not be upped by workflow: `npm version prepatch --preid=dev --no-git-tag-version`
-
-### TODO
-mvn publish by pom  
-workflow `api-release.yml` must check preconditions  
-remove workflow `api-publish.yml`
+**BEWARE** use conventional commits if you want to step up and publish new versions:  
+*   trigger minor bump: "feat:" or "feat(scope)"
+*   trigger major bump: "feat!:", "fix!:", "refactor(scope)!:" or "BREAKING CHANGE".
 
 
 ### SNAPSHOTs and development versions
