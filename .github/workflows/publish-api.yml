@@ -1,0 +1,101 @@
+name: Reusable workflow for API publishing = create release, deploy mvn artifact, publish npm packages
+
+on:
+  workflow_call:
+    inputs:
+      release-version:
+        description: Version to publish.
+        type: string
+        required: true
+      verify-project:
+        description: script that fail if project not releasable
+        type: string
+        default: npm run verify
+      public-access:
+        description: npm publish with option "--access public" if true.
+        type: string
+        required: true
+      # Little reason to override inputs below:
+      # no code should be compiled or run with proper use of workflow
+      npm-registry-url:
+        description: npm registry to publish to
+        type: string
+        default: https://npm.pkg.github.com
+      github-org:
+        description: GitHub organization
+        type: string
+        default: '@statens-pensjonskasse'
+      node-version:
+        description: Node version used
+        type: string
+        default: '26'
+      java-version:
+        description: Java version used
+        type: string
+        default: '25'
+      java-distribution:
+        description: Java distribution used
+        type: string
+        default: 'temurin'
+
+jobs:
+
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # node is preinstallled on ubuntu, but we need to reinstall to set up registry and org
+      - uses: actions/setup-node@v7
+        with: # node is preinstalled on ubuntu-latest, but publish needs setup-node to configure registry and auth
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.npm-registry-url }}
+          scope: ${{ inputs.github-org }}
+      - uses: actions/setup-java@v6
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: ${{ inputs.java-distribution }}
+
+      - name: verify project, check nothing dirty
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.PAT_FOR_PACKAGES_ACCESS }}
+        run: |
+          npm ci
+          ${{ inputs.verify-project }}
+          # abort before releasing if install or verify modified tracked files (untracked files are ignored)
+          dirty=$(git status --porcelain --untracked-files=no)
+          if [ -n "$dirty" ]; then
+            echo "::error::Working tree is dirty after install and verify, aborting release."
+            echo "$dirty"
+            git --no-pager diff
+            exit 1
+          fi
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.release-version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Publish public node package
+        if: inputs.public-access == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # node may need to install a package
+        run: npm publish --access public
+
+      - name: Publish internal node package
+        if: inputs.public-access != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # node may need to install a package
+        run: npm publish
+
+      - name: Deploy Maven artifact
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # maven should have no dependencies
+        run: mvn deploy
