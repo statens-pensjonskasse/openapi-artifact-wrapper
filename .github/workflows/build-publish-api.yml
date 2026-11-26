@@ -1,0 +1,166 @@
+name: Reusable workflow for preparing and publishing API = create release, deploy mvn artifact, publish npm packages
+
+on:
+  workflow_call:
+    inputs:
+      tbv-script:
+        description: Npm script that prepares project for release, runs after npm install
+        type: string
+        default: npm run tbv
+      commit-message:
+        description: Commit message for files updated by tbv-script.
+        type: string
+        default: 'chore: update project files to API version'
+      public-access:
+        description: npm publish with option "--access public" if true.
+        type: string
+        required: true
+      publish-from-branch:
+        description: workflow will only release and publish from matching branches (regex).
+        type: string
+        default: main
+      # Little reason to override inputs below:
+      # no code should be compiled or run with intended use of workflow
+      npm-registry-url:
+        description: npm registry to publish to
+        type: string
+        default: https://npm.pkg.github.com
+      github-org:
+        description: GitHub organization
+        type: string
+        default: '@statens-pensjonskasse'
+      node-version:
+        description: Node version used
+        type: string
+        default: '26'
+      java-version:
+        description: Java version used
+        type: string
+        default: '25'
+      java-distribution:
+        description: Java distribution used
+        type: string
+        default: 'temurin'
+      runner-tag:
+        description: workflow should run on...
+        type: string
+        default: 'ubuntu-latest'
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runner-tag }}
+    permissions:
+      contents: write
+      packages: read
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+      # commit-sha is empty if tbv-script changed nothing, then publish what was checked out
+      commit-sha: ${{ steps.commit.outputs.commit-sha || github.sha }}
+      publish: ${{ steps.release-check.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      # node is preinstallled on ubuntu, but we need to reinstall to set up registry and org
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.npm-registry-url }}
+          scope: ${{ inputs.github-org }}
+
+      - id: build
+        name: Run script ${{ inputs.tbv-script }}, emit version
+        env:
+          # PAT_FOR_PACKAGES_ACCESS for install and build - has rights to read org packages, but not write this repo or its packages
+          NODE_AUTH_TOKEN: ${{ secrets.PAT_FOR_PACKAGES_ACCESS }}
+        run: |
+          npm install # ci will fail if this is a renovate PR
+          ${{ inputs.tbv-script }}
+          git status  # report on changes
+          git add -A
+          API_VERSION=$(node -p "require('./package.json').version")
+          if ! [[ "$API_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must be in format X.Y.Z (e.g., 2.2.0)"
+            exit 1
+          fi
+          echo "version=$API_VERSION" >> "$GITHUB_OUTPUT"
+
+      - id: commit
+        name: Commit and push changes
+        uses: statens-pensjonskasse/gha-create-signed-commit@7b9e477ae72b66627fb37db6b841f0e31d3d965e # v0.1.5
+        with:
+          # GITHUB_TOKEN for commit, push, deploy - has rights to write this repo and its packages, but not rights to read org packages
+          token: ${{ secrets.GITHUB_TOKEN }}
+          message: ${{ inputs.commit-message }}
+          fail-on-no-changes: false
+          push: true
+
+      # publish job runs only if this sets publish=true
+      - id: release-check
+        name: verify if workflow may go on publishing
+        env:
+          API_VERSION: ${{ steps.build.outputs.version }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}  # head_ref is the source branch in pull requests
+          PUBLISH_FROM_BRANCH: ${{ inputs.publish-from-branch }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$API_VERSION" > /dev/null; then
+            echo "::notice::Release $API_VERSION already tagged, no need to publish"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$BRANCH" =~ ^($PUBLISH_FROM_BRANCH)$ ]]; then
+            echo "::notice::Branch $BRANCH does not match '$PUBLISH_FROM_BRANCH', not publishing"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "::notice::Release tag $API_VERSION not found, may release"
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ${{ inputs.runner-tag }}
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      # the commit pushed by build, so files updated by tbv-script are included
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.build.outputs.commit-sha }}
+      # setup-node writes .npmrc with registry and auth for npm publish
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.npm-registry-url }}
+          scope: ${{ inputs.github-org }}
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.build.outputs.version }}
+          target_commitish: ${{ needs.build.outputs.commit-sha }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Publish public node package
+        if: inputs.public-access == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish --access public
+
+      - name: Publish internal node package
+        if: inputs.public-access != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish
+
+      - uses: actions/setup-java@v6
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: ${{ inputs.java-distribution }}
+
+      - name: Deploy Maven artifact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: mvn deploy

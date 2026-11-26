@@ -6,7 +6,7 @@ on:
       tbv-script:
         description: Npm script that tests, builds and verifies readiness for release, runs after npm install
         type: string
-        default: 'tbv'
+        default: 'npm run tbv'
       commit-message:
         description: Commit message for files updated by tbv-script.
         type: string
@@ -52,7 +52,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.PAT_FOR_PACKAGES_ACCESS }}
         run: |
           npm install # ci will fail if this is a renovate PR
-          npm run ${{ inputs.tbv-script }}
+          ${{ inputs.tbv-script }}
           git status
           git add -A
 
