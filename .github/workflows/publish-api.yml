@@ -7,10 +7,10 @@ on:
         description: Version to publish.
         type: string
         required: true
-      verify-project:
-        description: script that fail if project not releasable
+      tbv-script:
+        description: Npm script that tests, builds and verifies readiness for release, runs after npm install
         type: string
-        default: npm run verify
+        default: npm run tbv
       public-access:
         description: npm publish with option "--access public" if true.
         type: string
@@ -40,8 +40,33 @@ on:
 
 jobs:
 
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      publish: ${{ steps.verify.outputs.publish }}
+    steps:
+      - id: verify
+        run: |
+          API_VERSION=${{ inputs.release-version }}
+          if ! [[ "$API_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Version must be in format X.Y.Z (e.g., 2.2.0)"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$API_VERSION" > /dev/null; then
+            echo "::notice::Release tag $API_VERSION published, done"
+            exit 0
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Release tag $API_VERSION not found, may release"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
   publish:
     runs-on: ubuntu-latest
+    needs: verify
+    if: needs.verify.outputs.publish == 'true'
     permissions:
       contents: write
       packages: write
@@ -61,16 +86,16 @@ jobs:
           java-version: ${{ inputs.java-version }}
           distribution: ${{ inputs.java-distribution }}
 
-      - name: verify project, check nothing dirty
+      - name: run tbv-script, abort if dirty woorking tree
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.PAT_FOR_PACKAGES_ACCESS }}
+          NODE_AUTH_TOKEN: ${{ secrets.PAT_FOR_PACKAGES_ACCESS }} # rights to read organization packages
         run: |
           npm ci
-          ${{ inputs.verify-project }}
-          # abort before releasing if install or verify modified tracked files (untracked files are ignored)
+          ${{ inputs.tbv-script }}
+          # abort before releasing if dirty files (untracked files are ignored)
           dirty=$(git status --porcelain --untracked-files=no)
           if [ -n "$dirty" ]; then
-            echo "::error::Working tree is dirty after install and verify, aborting release."
+            echo "::error::Working tree is dirty after ${{ inputs.tbv-script }}, aborting release."
             echo "$dirty"
             git --no-pager diff
             exit 1
@@ -86,16 +111,16 @@ jobs:
       - name: Publish public node package
         if: inputs.public-access == 'true'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # node may need to install a package
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # rights to write repo package, but not read organization dependencies
         run: npm publish --access public
 
       - name: Publish internal node package
         if: inputs.public-access != 'true'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # node may need to install a package
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # rights to write repo package, but not read organization dependencies
         run: npm publish
 
       - name: Deploy Maven artifact
         env:
-          GITHUB_TOKEN: ${{ github.token }} # maven should have no dependencies
+          GITHUB_TOKEN: ${{ github.token }} # rights to deploy repo artifact, but not read organization dependencies
         run: mvn deploy
