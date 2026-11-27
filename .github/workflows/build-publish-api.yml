@@ -78,6 +78,12 @@ jobs:
           ${{ inputs.tbv-script }}
           git status  # report on changes
           git add -A
+          # dirty=true if anything is staged for commit (modified, added or deleted files)
+          if git diff --cached --quiet; then
+            echo "dirty=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "dirty=true" >> "$GITHUB_OUTPUT"
+          fi
           API_VERSION=$(node -p "require('./package.json').version")
           if ! [[ "$API_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::Version must be in format X.Y.Z (e.g., 2.2.0)"
@@ -87,6 +93,7 @@ jobs:
 
       - id: commit
         name: Commit and push changes
+        if: steps.build.outputs.dirty == 'true'
         uses: statens-pensjonskasse/gha-create-signed-commit@7b9e477ae72b66627fb37db6b841f0e31d3d965e # v0.1.5
         with:
           # GITHUB_TOKEN for commit, push, deploy - has rights to write this repo and its packages, but not rights to read org packages
