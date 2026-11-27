@@ -10,16 +10,18 @@ Scripts may be run on ci or locally on developer PC with appropriate Node instal
 * `node apiwrap.mjs help`
 * `npm install @statens-pensjonskasse/openapi-artifact-wrapper && npx @statens-pensjonskasse/openapi-artifact-wrapper help`
 
-Get started by generating bootstrap setup: `node ./apiwrap.mjs bootstrap some.group.id`, then edit generated pom.xml as appropriate.  
+Get started by generating bootstrap setup: `node apiwrap.mjs bootstrap some.group.id`, then edit generated pom.xml as appropriate.  
 Example of use in [skatt-inntekt-api](https://github.com/statens-pensjonskasse/skatt-inntekt-api)  
 
 **Note**: artifact published to github packages under organization "statens-pensjonskasse" may not be available outside of SPK.  
 ...so until we have fixed that, fork the repo and use the code.
 
 ### Reusable workflows
-Reusable workflows are chained from top to bottom:  
-1. `build-api.yml` by default runs `npm run install && npm run tbv && git add -A && git commit -am"chore: update project files`
-2. `publish-api.yml` by default runs `npm run ci && npm run verify`, then release and publish/deploy artifacts
+`build-publish-api.yml` by default runs:  
+1. `npm run tbv`
+2. commit and push changed files
+3. proceeds to publish if needed and permitted (branch & version OK)
+4. publish = release, npm publish, mvn deploy
 
 
 License, contact, support
