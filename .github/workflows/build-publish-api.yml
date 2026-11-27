@@ -71,8 +71,8 @@ jobs:
       - id: build
         name: Run script ${{ inputs.tbv-script }}, emit version
         env:
-          # PAT_FOR_PACKAGES_ACCESS for install and build - has rights to read org packages, but not write this repo or its packages
-          NODE_AUTH_TOKEN: ${{ secrets.PAT_FOR_PACKAGES_ACCESS }}
+          # litt problematisk for public repo å token med tilgang til package fra annet public repo under samme github organization
+          NODE_AUTH_TOKEN: ${{ secrets.PAT_FOR_PACKAGES_ACCESS || secrets.GITHUB_TOKEN }}
         run: |
           npm install # ci will fail if this is a renovate PR
           ${{ inputs.tbv-script }}
