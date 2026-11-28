@@ -143,6 +143,22 @@ jobs:
           registry-url: ${{ inputs.npm-registry-url }}
           scope: ${{ inputs.github-org }}
 
+      - name: Build so that project is ready for publish, abort if dirty files
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.PAT_FOR_PACKAGES_ACCESS || secrets.GITHUB_TOKEN }}
+        run: |
+          npm ci
+          ${{ inputs.tbv-script }}
+          git status  # report on changes
+          git add -A
+          # if anything is modified (which is not ignored)
+          if git diff --cached --quiet; then
+            echo "::notice::All systems are go https://www.youtube.com/watch?v=bYMHAWAK7hk"
+          else
+            echo "::error::Cannot publish dirty project https://www.youtube.com/shorts/EyNHmqtYKHs"
+            exit 1
+          fi
+
       - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.build.outputs.version }}
