@@ -76,6 +76,7 @@ jobs:
         run: |
           npm install # ci will fail if this is a renovate PR
           ${{ inputs.tbv-script }}
+          npm install # tbv-script may update package.json (version)
           git status  # report on changes
           git add -A
           # dirty=true if anything is staged for commit (modified, added or deleted files)
